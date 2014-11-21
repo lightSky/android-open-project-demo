@@ -40,6 +40,7 @@ public class TabPageIndicator extends HorizontalScrollView implements PageIndica
 
     /**
      * Interface for a callback when the selected tab has been reselected.
+     * 当Tab被再次选择的时候调用，应该是用于扩展：做一些刷新的操作
      */
     public interface OnTabReselectedListener {
         /**
@@ -82,8 +83,8 @@ public class TabPageIndicator extends HorizontalScrollView implements PageIndica
         super(context, attrs);
         setHorizontalScrollBarEnabled(false);
 
-        mTabLayout = new IcsLinearLayout(context, R.attr.vpiTabPageIndicatorStyle);
-        addView(mTabLayout, new ViewGroup.LayoutParams(WRAP_CONTENT, MATCH_PARENT));
+        mTabLayout = new IcsLinearLayout(context, R.attr.vpiTabPageIndicatorStyle);//初始化一个IcsLinearLayout，作为父布局
+        addView(mTabLayout, new ViewGroup.LayoutParams(WRAP_CONTENT, MATCH_PARENT));//添加到HorizontalScrollView中
     }
 
     public void setOnTabReselectedListener(OnTabReselectedListener listener) {
@@ -92,46 +93,58 @@ public class TabPageIndicator extends HorizontalScrollView implements PageIndica
 
     @Override
     public void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        final int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+        final int widthMode = MeasureSpec.getMode(widthMeasureSpec);//获取测量模式
         final boolean lockedExpanded = widthMode == MeasureSpec.EXACTLY;
-        setFillViewport(lockedExpanded);
+        setFillViewport(lockedExpanded);//内容的宽度填充窗体边界
 
         final int childCount = mTabLayout.getChildCount();
+        //MeasureSpec模式EXACTLY、 AT_MOST下计算MaxTabWidth
         if (childCount > 1 && (widthMode == MeasureSpec.EXACTLY || widthMode == MeasureSpec.AT_MOST)) {
             if (childCount > 2) {
                 mMaxTabWidth = (int)(MeasureSpec.getSize(widthMeasureSpec) * 0.4f);
             } else {
-                mMaxTabWidth = MeasureSpec.getSize(widthMeasureSpec) / 2;
+                mMaxTabWidth = MeasureSpec.getSize(widthMeasureSpec) / 2;//只有2个Tab的时候
             }
         } else {
             mMaxTabWidth = -1;
         }
 
+        //TODO   ??????????????????????????????
         final int oldWidth = getMeasuredWidth();
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         final int newWidth = getMeasuredWidth();
 
+        //当TabPageIndicator的整体width变化的时候，滑到当前选中的Tab
         if (lockedExpanded && oldWidth != newWidth) {
             // Recenter the tab display if we're at a new (scrollable) size.
             setCurrentItem(mSelectedTabIndex);
         }
     }
 
+    /**
+     * 滑动到指定的Tab
+     * @param position
+     */
     private void animateToTab(final int position) {
         final View tabView = mTabLayout.getChildAt(position);
-        if (mTabSelector != null) {
+        if (mTabSelector != null) {//因为每次的scrollPos要重新计算，所以干掉之前的Runnable，释放资源
             removeCallbacks(mTabSelector);
         }
         mTabSelector = new Runnable() {
             public void run() {
                 final int scrollPos = tabView.getLeft() - (getWidth() - tabView.getWidth()) / 2;
-                smoothScrollTo(scrollPos, 0);
+                smoothScrollTo(scrollPos, 0);//平滑的滑动到指定位置
                 mTabSelector = null;
             }
         };
-        post(mTabSelector);
+        post(mTabSelector);//向消息队列中加入一个滑动的Message
     }
 
+    /**
+     * 当View attach 到window的时候被调用，
+     * 这时拥有一块绘画层，即将开始draw。应确保在onDraw之前调用，但在measure之前和之后调用都可。
+     * 因为这里为draw步骤进行一些准备工作
+     */
     @Override
     public void onAttachedToWindow() {
         super.onAttachedToWindow();
@@ -141,6 +154,10 @@ public class TabPageIndicator extends HorizontalScrollView implements PageIndica
         }
     }
 
+    /**
+     * 当View 从window脱离时被调用，之时就不再拥有绘画层。
+     * 在这两个方法里主要针对MessageQuene做一些清除的操作：从消息队列中加入和移除该message
+     */
     @Override
     public void onDetachedFromWindow() {
         super.onDetachedFromWindow();
@@ -149,6 +166,12 @@ public class TabPageIndicator extends HorizontalScrollView implements PageIndica
         }
     }
 
+    /**
+     * 添加Tab
+     * @param index
+     * @param text
+     * @param iconResId
+     */
     private void addTab(int index, CharSequence text, int iconResId) {
         final TabView tabView = new TabView(getContext());
         tabView.mIndex = index;
@@ -156,7 +179,7 @@ public class TabPageIndicator extends HorizontalScrollView implements PageIndica
         tabView.setOnClickListener(mTabClickListener);
         tabView.setText(text);
 
-        if (iconResId != 0) {
+        if (iconResId != 0) {//有Icon，设置该Icon在Tab的左侧
             tabView.setCompoundDrawablesWithIntrinsicBounds(iconResId, 0, 0, 0);
         }
 
@@ -202,6 +225,9 @@ public class TabPageIndicator extends HorizontalScrollView implements PageIndica
         notifyDataSetChanged();
     }
 
+    /**
+     * 填充（刷新）布局
+     */
     public void notifyDataSetChanged() {
         mTabLayout.removeAllViews();
         PagerAdapter adapter = mViewPager.getAdapter();
@@ -211,13 +237,13 @@ public class TabPageIndicator extends HorizontalScrollView implements PageIndica
         }
         final int count = adapter.getCount();
         for (int i = 0; i < count; i++) {
-            CharSequence title = adapter.getPageTitle(i);
+            CharSequence title = adapter.getPageTitle(i);//获取当前Tab的Title
             if (title == null) {
                 title = EMPTY_TITLE;
             }
             int iconResId = 0;
             if (iconAdapter != null) {
-                iconResId = iconAdapter.getIconResId(i);
+                iconResId = iconAdapter.getIconResId(i);//获取当前Tab的Icon ResId
             }
             addTab(i, title, iconResId);
         }
@@ -225,7 +251,7 @@ public class TabPageIndicator extends HorizontalScrollView implements PageIndica
             mSelectedTabIndex = count - 1;
         }
         setCurrentItem(mSelectedTabIndex);
-        requestLayout();
+        requestLayout();//请求布局，调用measure()过程 和 layout()过程
     }
 
     @Override
@@ -266,7 +292,7 @@ public class TabPageIndicator extends HorizontalScrollView implements PageIndica
         }
 
         @Override
-        public void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        public void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {//处理MaxWidth的情况
             super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
             // Re-measure if we went beyond our maximum size.

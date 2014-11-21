@@ -50,12 +50,18 @@ public class TitlePageIndicator extends View implements PageIndicator {
      * center should the underline be fully faded. A value of 0.25 means that
      * halfway between the center of the screen and an edge.
      */
+    /**
+     * 百分比：屏幕的宽度偏离中心位置的时候，底线的渐变度
+     */
     private static final float SELECTION_FADE_PERCENTAGE = 0.25f;
 
     /**
      * Percentage indicating what percentage of the screen width away from
      * center should the selected text bold turn off. A value of 0.05 means
      * that 10% between the center and an edge.
+     */
+    /**
+     * 百分比：滑动的时候，文字的透明度比例
      */
     private static final float BOLD_FADE_PERCENTAGE = 0.05f;
 
@@ -66,6 +72,7 @@ public class TitlePageIndicator extends View implements PageIndicator {
 
     /**
      * Interface for a callback when the center item has been clicked.
+     * 点击当前选中的中心Item时，做一些处理操作，比如：刷新
      */
     public interface OnCenterItemClickListener {
         /**
@@ -76,6 +83,9 @@ public class TitlePageIndicator extends View implements PageIndicator {
         void onCenterItemClick(int position);
     }
 
+    /**
+     * indicator样式：无、三角钩、下划线
+     */
     public enum IndicatorStyle {
         None(0), Triangle(1), Underline(2);
 
@@ -95,6 +105,9 @@ public class TitlePageIndicator extends View implements PageIndicator {
         }
     }
 
+    /**
+     * 下划线导航的位置：上、下
+     */
     public enum LinePosition {
         Bottom(0), Top(1);
 
@@ -588,6 +601,7 @@ public class TitlePageIndicator extends View implements PageIndicator {
                     final float rightThird = halfWidth + sixthWidth;
                     final float eventX = ev.getX();
 
+                    //以1/3为界限，分为左中右，然后分别根据手势水平移动的距离，来决定是向前后翻页
                     if (eventX < leftThird) {
                         if (mCurrentPage > 0) {
                             if (action != MotionEvent.ACTION_CANCEL) {
@@ -694,6 +708,7 @@ public class TitlePageIndicator extends View implements PageIndicator {
      * @param index
      * @param paint
      * @return
+     *
      */
     private Rect calcBounds(int index, Paint paint) {
         //Calculate the text bounds
